@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vacation Planner - Destination Review</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f5f7fa;
+    color: #1a1a2e;
+    line-height: 1.6;
+  }
+
+  header {
+    background: linear-gradient(135deg, #2d3436 0%, #636e72 100%);
+    color: #fff;
+    padding: 2rem;
+    text-align: center;
+  }
+
+  header h1 { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; }
+  header p { color: #dfe6e9; margin-top: 0.25rem; font-size: 0.95rem; }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+
+  /* Filters bar */
+  .filters {
+    display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;
+    background: #fff; border-radius: 8px; padding: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 1.5rem;
+  }
+
+  .filter-group { display: flex; flex-direction: column; gap: 0.3rem; }
+  .filter-group label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #636e72; letter-spacing: 0.04em; }
+
+  select, input[type=range] { font-size: 0.9rem; padding: 0.4rem 0.6rem; border: 1px solid #dfe6e9; border-radius: 4px; background: #fff; }
+  select { min-width: 140px; cursor: pointer; }
+  select:focus, input:focus { outline: none; border-color: #0984e3; box-shadow: 0 0 0 2px rgba(9,132,227,0.15); }
+
+  .range-display { font-size: 0.85rem; color: #2d3436; font-weight: 500; min-width: 60px; text-align: center; }
+
+  .filter-group.range-group { min-width: 220px; }
+  input[type=range] { width: 100%; padding: 0; border: none; accent-color: #0984e3; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.5rem 1rem; border: none; border-radius: 6px; cursor: pointer;
+    font-size: 0.85rem; font-weight: 600; transition: all 0.15s;
+  }
+  .btn-compare { background: #0984e3; color: #fff; }
+  .btn-compare:hover { background: #0770c2; }
+  .btn-compare:disabled { background: #b2bec3; cursor: not-allowed; }
+  .btn-clear { background: #dfe6e9; color: #2d3436; }
+  .btn-clear:hover { background: #c8d6db; }
+
+  .compare-actions { display: flex; gap: 0.5rem; align-items: center; margin-left: auto; }
+  .compare-count { font-size: 0.8rem; color: #636e72; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+
+  thead { background: #f8f9fa; position: sticky; top: 0; z-index: 2; }
+  th {
+    padding: 0.75rem 1rem; text-align: left; font-weight: 600; color: #2d3436;
+    border-bottom: 2px solid #dfe6e9; cursor: pointer; user-select: none; white-space: nowrap;
+  }
+  th:hover { color: #0984e3; }
+  th .sort-arrow { font-size: 0.7rem; margin-left: 0.3rem; opacity: 0.4; }
+  th.sorted .sort-arrow { opacity: 1; color: #0984e3; }
+
+  td { padding: 0.6rem 1rem; border-bottom: 1px solid #f1f2f6; vertical-align: top; }
+
+  tr:hover td { background: #f0f7ff; }
+  tr.selected td { background: #e8f4fd; }
+
+  .check-cell { width: 40px; text-align: center; }
+  .check-cell input { width: 16px; height: 16px; cursor: pointer; accent-color: #0984e3; }
+
+  /* Badges */
+  .badge {
+    display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px;
+    font-size: 0.75rem; font-weight: 600; letter-spacing: 0.02em;
+  }
+  .badge-verified { background: #00b894; color: #fff; }
+  .badge-confirmed { background: #0984e3; color: #fff; }
+  .badge-unverified { background: #fdcb6e; color: #2d3436; }
+
+  .badge-beach { background: #81ecec; color: #00695c; }
+  .badge-mountain { background: #a29bfe; color: #fff; }
+  .badge-city { background: #fd79a8; color: #fff; }
+  .badge-nature { background: #55efc4; color: #00695c; }
+  .badge-historical { background: #ffeaa7; color: #6c5800; }
+
+  .rating { font-weight: 600; }
+  .rating-high { color: #00b894; }
+  .rating-mid { color: #e17055; }
+  .rating-low { color: #d63031; }
+
+  .cost { font-weight: 500; }
+  .travel-time { white-space: nowrap; }
+
+  .highlights-cell { max-width: 250px; font-size: 0.8rem; color: #636e72; }
+
+  /* Comparison panel */
+  .compare-panel {
+    display: none; margin-top: 1.5rem; background: #fff; border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden;
+  }
+  .compare-panel.visible { display: block; }
+
+  .compare-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 1rem 1.25rem; background: #2d3436; color: #fff;
+  }
+  .compare-header h2 { font-size: 1.1rem; font-weight: 600; }
+
+  .compare-grid { display: grid; gap: 0; }
+
+  .compare-cell {
+    padding: 0.6rem 1rem; border-bottom: 1px solid #f1f2f6;
+    font-size: 0.85rem;
+  }
+  .compare-label {
+    padding: 0.6rem 1rem; border-bottom: 1px solid #f1f2f6;
+    font-size: 0.8rem; font-weight: 600; color: #636e72; background: #f8f9fa;
+    text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .compare-name {
+    padding: 0.75rem 1rem; font-weight: 600; font-size: 0.95rem;
+    background: #f8f9fa; border-bottom: 2px solid #dfe6e9;
+  }
+
+  .compare-better { background: #f0fff4; }
+  .compare-worse { background: #fff5f5; }
+
+  /* Empty state */
+  .empty-state { text-align: center; padding: 3rem; color: #636e72; }
+  .empty-state p { font-size: 1rem; }
+
+  /* Footer */
+  footer { text-align: center; padding: 2rem; color: #b2bec3; font-size: 0.8rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Vacation Planner</h1>
+  <p>Destination Review &amp; Comparison Tool</p>
+</header>
+
+<div class="container">
+
+  <!-- Filters -->
+  <div class="filters">
+    <div class="filter-group">
+      <label>Type</label>
+      <select id="filterType">
+        <option value="">All Types</option>
+        <option value="beach">Beach</option>
+        <option value="mountain">Mountain</option>
+        <option value="city">City</option>
+        <option value="nature">Nature</option>
+        <option value="historical">Historical</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>Verification</label>
+      <select id="filterVerification">
+        <option value="">All Levels</option>
+        <option value="VERIFIED">Verified</option>
+        <option value="CONFIRMED">Confirmed</option>
+        <option value="UNVERIFIED">Unverified</option>
+      </select>
+    </div>
+
+    <div class="filter-group range-group">
+      <label>Max Cost ($/person/night)</label>
+      <input type="range" id="filterCost" min="0" max="250" value="250" step="5">
+      <div class="range-display" id="costDisplay">$250</div>
+    </div>
+
+    <div class="compare-actions">
+      <span class="compare-count" id="compareCount">0 selected</span>
+      <button class="btn btn-compare" id="btnCompare" disabled>Compare</button>
+      <button class="btn btn-clear" id="btnClearCompare">Clear</button>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table id="destTable">
+      <thead>
+        <tr>
+          <th class="check-cell"></th>
+          <th data-col="destination_name">Name <span class="sort-arrow">&#9650;</span></th>
+          <th data-col="state_or_country">State <span class="sort-arrow">&#9650;</span></th>
+          <th data-col="type">Type <span class="sort-arrow">&#9650;</span></th>
+          <th data-col="travel_time_hours">Drive <span class="sort-arrow">&#9650;</span></th>
+          <th data-col="estimated_cost_per_person_per_night">$/Night <span class="sort-arrow">&#9650;</span></th>
+          <th data-col="overall_rating">Rating <span class="sort-arrow">&#9650;</span></th>
+          <th data-col="best_season">Season <span class="sort-arrow">&#9650;</span></th>
+          <th data-col="verification_level">Verified <span class="sort-arrow">&#9650;</span></th>
+          <th>Highlights</th>
+        </tr>
+      </thead>
+      <tbody id="destBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Compare panel -->
+  <div class="compare-panel" id="comparePanel">
+    <div class="compare-header">
+      <h2>Side-by-Side Comparison</h2>
+      <button class="btn btn-clear" id="btnCloseCompare">Close</button>
+    </div>
+    <div class="compare-grid" id="compareGrid"></div>
+  </div>
+
+</div>
+
+<footer>
+  Vacation Planner Prototype -- Data from DEST-*.md files -- Not for production use
+</footer>
+
+<script>
+// ===================================================================
+// Embedded destination data (hardcoded from DEST-001 through DEST-005)
+// All data originates from the YAML frontmatter in the .md files.
+// This is static, trusted data -- no user input is rendered.
+// ===================================================================
+const destinations = [
+  {
+    destination_id: "DEST-001",
+    destination_name: "Outer Banks",
+    city: "Kill Devil Hills",
+    state_or_country: "NC",
+    type: "beach",
+    travel_time_hours: 3.0,
+    estimated_cost_per_person_per_night: 85,
+    cost_date_checked: "2025-06-15",
+    overall_rating: 4.3,
+    ratings_breakdown: { tripadvisor: 4.5, google: 4.0, expedia: 4.5 },
+    best_season: "June-September",
+    seasonal_closures: "Most rental homes April-November only; some restaurants close Nov-Mar",
+    highlights: [
+      "Wright Brothers Memorial",
+      "Jockey's Ridge State Park",
+      "Cape Hatteras Seashore",
+      "Wild horse tours in Corolla",
+      "Kiteboarding and surfing"
+    ],
+    verification_level: "CONFIRMED",
+    source_count: 4,
+    research_notes: "Cost from June 2025. TripAdvisor and Expedia agree; Google lower."
+  },
+  {
+    destination_id: "DEST-002",
+    destination_name: "Canaan Valley Resort",
+    city: "Davis",
+    state_or_country: "WV",
+    type: "mountain",
+    travel_time_hours: 3.0,
+    estimated_cost_per_person_per_night: 75,
+    cost_date_checked: "2025-09-01",
+    overall_rating: 3.87,
+    ratings_breakdown: { tripadvisor: 4.0, google: 3.8, expedia: 3.8 },
+    best_season: "Year-round",
+    seasonal_closures: "None",
+    highlights: [
+      "Canaan Valley Ski Resort (47 trails)",
+      "Blackwater Falls State Park",
+      "Dolly Sods Wilderness hiking",
+      "Bortle 2-3 dark sky stargazing"
+    ],
+    verification_level: "UNVERIFIED",
+    source_count: 4,
+    research_notes: "TRAVEL TIME WRONG: listed 3h, actually 4h 35m from Richmond. Pricing not re-verified after management change."
+  },
+  {
+    destination_id: "DEST-003",
+    destination_name: "Charleston Historic District",
+    city: "Charleston",
+    state_or_country: "SC",
+    type: "historical",
+    travel_time_hours: 5.5,
+    estimated_cost_per_person_per_night: 140,
+    cost_date_checked: "2026-03-12",
+    overall_rating: 4.63,
+    ratings_breakdown: { tripadvisor: 4.5, google: 4.7, yelp: 4.7 },
+    best_season: "March-May, September-November",
+    seasonal_closures: "None",
+    highlights: [
+      "Historic district walking tours",
+      "Rainbow Row",
+      "Fort Sumter National Monument",
+      "World-class dining (Husk, FIG)",
+      "Folly Beach (20 min)"
+    ],
+    verification_level: "VERIFIED",
+    source_count: 6,
+    research_notes: "Cleanest entry. All sources agree. No discrepancies."
+  },
+  {
+    destination_id: "DEST-004",
+    destination_name: "Shenandoah National Park",
+    city: "Luray",
+    state_or_country: "VA",
+    type: "nature",
+    travel_time_hours: 2.0,
+    estimated_cost_per_person_per_night: 65,
+    cost_date_checked: "2026-03-18",
+    overall_rating: 4.53,
+    ratings_breakdown: { tripadvisor: 4.5, google: 4.7, nps_survey: 4.4 },
+    best_season: "May-June, September-October",
+    seasonal_closures: "Skyline Drive sections close Dec-Mar; some facilities close Nov-Mar",
+    highlights: [
+      "Skyline Drive (105 miles)",
+      "Old Rag Mountain hike",
+      "Dark Hollow Falls",
+      "Big Meadows Lodge",
+      "Fall foliage (peak mid-October)"
+    ],
+    verification_level: "CONFIRMED",
+    source_count: 5,
+    research_notes: "Rating spread (4.4-4.7) is wider than typical. Different sources measure different things."
+  },
+  {
+    destination_id: "DEST-005",
+    destination_name: "Wintergreen Resort",
+    city: "Roseland",
+    state_or_country: "VA",
+    type: "mountain",
+    travel_time_hours: 2.5,
+    estimated_cost_per_person_per_night: 110,
+    cost_date_checked: "2025-04-10",
+    overall_rating: 3.75,
+    ratings_breakdown: { tripadvisor: 3.5, google: 4.0 },
+    best_season: "June-August, December-March",
+    seasonal_closures: "Ski Dec-Mar only; pool Memorial Day-Labor Day; spa closed for renovation",
+    highlights: [
+      "Skiing (26 trails)",
+      "Golf (45 holes)",
+      "Blue Ridge Parkway access",
+      "Nelson County breweries/wineries"
+    ],
+    verification_level: "UNVERIFIED",
+    source_count: 3,
+    research_notes: "Rating gap (3.5 vs 4.0). Pricing from Apr 2025, likely stale. Spa closed since Jan 2026."
+  }
+];
+
+// ===================================================================
+// Application state
+// ===================================================================
+let sortCol = "destination_name";
+let sortDir = "asc";
+let selected = new Set();
+
+// ===================================================================
+// Rendering helpers (static trusted data only)
+// ===================================================================
+function createBadge(text, className) {
+  var span = document.createElement("span");
+  span.className = "badge " + className;
+  span.textContent = text;
+  return span;
+}
+
+function verificationClass(level) {
+  if (level === "VERIFIED") return "badge-verified";
+  if (level === "CONFIRMED") return "badge-confirmed";
+  return "badge-unverified";
+}
+
+function ratingClass(r) {
+  if (r >= 4.3) return "rating-high";
+  if (r >= 3.8) return "rating-mid";
+  return "rating-low";
+}
+
+function getFilteredData() {
+  var typeFilter = document.getElementById("filterType").value;
+  var verifFilter = document.getElementById("filterVerification").value;
+  var costMax = parseInt(document.getElementById("filterCost").value);
+
+  return destinations.filter(function(d) {
+    if (typeFilter && d.type !== typeFilter) return false;
+    if (verifFilter && d.verification_level !== verifFilter) return false;
+    if (d.estimated_cost_per_person_per_night > costMax) return false;
+    return true;
+  });
+}
+
+function getSortedData(data) {
+  return data.slice().sort(function(a, b) {
+    var va = a[sortCol];
+    var vb = b[sortCol];
+    if (typeof va === "string") va = va.toLowerCase();
+    if (typeof vb === "string") vb = vb.toLowerCase();
+    if (va < vb) return sortDir === "asc" ? -1 : 1;
+    if (va > vb) return sortDir === "asc" ? 1 : -1;
+    return 0;
+  });
+}
+
+// ===================================================================
+// Table rendering using safe DOM methods
+// ===================================================================
+function renderTable() {
+  var data = getSortedData(getFilteredData());
+  var tbody = document.getElementById("destBody");
+
+  // Clear existing rows
+  while (tbody.firstChild) { tbody.removeChild(tbody.firstChild); }
+
+  if (data.length === 0) {
+    var emptyRow = document.createElement("tr");
+    var emptyCell = document.createElement("td");
+    emptyCell.colSpan = 10;
+    var emptyDiv = document.createElement("div");
+    emptyDiv.className = "empty-state";
+    var emptyP = document.createElement("p");
+    emptyP.textContent = "No destinations match the current filters.";
+    emptyDiv.appendChild(emptyP);
+    emptyCell.appendChild(emptyDiv);
+    emptyRow.appendChild(emptyCell);
+    tbody.appendChild(emptyRow);
+    return;
+  }
+
+  data.forEach(function(d) {
+    var isSelected = selected.has(d.destination_id);
+    var tr = document.createElement("tr");
+    if (isSelected) tr.className = "selected";
+    tr.dataset.id = d.destination_id;
+
+    // Checkbox cell
+    var checkTd = document.createElement("td");
+    checkTd.className = "check-cell";
+    var cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = isSelected;
+    cb.dataset.id = d.destination_id;
+    cb.addEventListener("change", function() {
+      var id = this.dataset.id;
+      if (this.checked) {
+        if (selected.size >= 3) { this.checked = false; return; }
+        selected.add(id);
+      } else {
+        selected.delete(id);
+      }
+      updateCompareState();
+      renderTable();
+    });
+    checkTd.appendChild(cb);
+    tr.appendChild(checkTd);
+
+    // Name cell
+    var nameTd = document.createElement("td");
+    var nameStrong = document.createElement("strong");
+    nameStrong.textContent = d.destination_name;
+    nameTd.appendChild(nameStrong);
+    nameTd.appendChild(document.createElement("br"));
+    var citySpan = document.createElement("span");
+    citySpan.style.fontSize = "0.8rem";
+    citySpan.style.color = "#636e72";
+    citySpan.textContent = d.city;
+    nameTd.appendChild(citySpan);
+    tr.appendChild(nameTd);
+
+    // State cell
+    var stateTd = document.createElement("td");
+    stateTd.textContent = d.state_or_country;
+    tr.appendChild(stateTd);
+
+    // Type cell
+    var typeTd = document.createElement("td");
+    typeTd.appendChild(createBadge(d.type, "badge-" + d.type));
+    tr.appendChild(typeTd);
+
+    // Drive time cell
+    var driveTd = document.createElement("td");
+    driveTd.className = "travel-time";
+    driveTd.textContent = d.travel_time_hours + "h";
+    tr.appendChild(driveTd);
+
+    // Cost cell
+    var costTd = document.createElement("td");
+    costTd.className = "cost";
+    costTd.textContent = "$" + d.estimated_cost_per_person_per_night;
+    tr.appendChild(costTd);
+
+    // Rating cell
+    var ratingTd = document.createElement("td");
+    ratingTd.className = "rating " + ratingClass(d.overall_rating);
+    ratingTd.textContent = d.overall_rating.toFixed(2);
+    tr.appendChild(ratingTd);
+
+    // Season cell
+    var seasonTd = document.createElement("td");
+    seasonTd.textContent = d.best_season;
+    tr.appendChild(seasonTd);
+
+    // Verification cell
+    var verifTd = document.createElement("td");
+    verifTd.appendChild(createBadge(d.verification_level, verificationClass(d.verification_level)));
+    tr.appendChild(verifTd);
+
+    // Highlights cell
+    var hlTd = document.createElement("td");
+    hlTd.className = "highlights-cell";
+    var hlText = d.highlights.slice(0, 3).join(", ");
+    if (d.highlights.length > 3) hlText += "...";
+    hlTd.textContent = hlText;
+    tr.appendChild(hlTd);
+
+    tbody.appendChild(tr);
+  });
+
+  updateSortHeaders();
+}
+
+function updateSortHeaders() {
+  document.querySelectorAll("th[data-col]").forEach(function(th) {
+    var col = th.dataset.col;
+    var arrow = th.querySelector(".sort-arrow");
+    if (col === sortCol) {
+      th.classList.add("sorted");
+      arrow.textContent = sortDir === "asc" ? "\u25B2" : "\u25BC";
+    } else {
+      th.classList.remove("sorted");
+      arrow.textContent = "\u25B2";
+    }
+  });
+}
+
+function updateCompareState() {
+  var count = selected.size;
+  document.getElementById("compareCount").textContent = count + " selected";
+  document.getElementById("btnCompare").disabled = count < 2;
+}
+
+// ===================================================================
+// Comparison panel rendering using safe DOM methods
+// ===================================================================
+function renderComparison() {
+  if (selected.size < 2) return;
+
+  var items = destinations.filter(function(d) { return selected.has(d.destination_id); });
+  var panel = document.getElementById("comparePanel");
+  var grid = document.getElementById("compareGrid");
+
+  panel.classList.add("visible");
+  grid.style.gridTemplateColumns = "160px repeat(" + items.length + ", 1fr)";
+
+  // Clear existing content
+  while (grid.firstChild) { grid.removeChild(grid.firstChild); }
+
+  var rows = [
+    { label: "Name", fn: function(d) { return d.destination_name; } },
+    { label: "Location", fn: function(d) { return d.city + ", " + d.state_or_country; } },
+    { label: "Type", fn: function(d) { return d.type; }, isBadge: true },
+    { label: "Drive Time", key: "travel_time_hours", suffix: " hours", compare: "lower" },
+    { label: "Cost/Night", key: "estimated_cost_per_person_per_night", prefix: "$", compare: "lower" },
+    { label: "Cost Checked", key: "cost_date_checked" },
+    { label: "Rating", key: "overall_rating", compare: "higher" },
+    { label: "Ratings Detail", fn: function(d) {
+        return Object.keys(d.ratings_breakdown).map(function(k) {
+          return k + ": " + d.ratings_breakdown[k];
+        }).join(", ");
+      }
+    },
+    { label: "Best Season", key: "best_season" },
+    { label: "Closures", key: "seasonal_closures" },
+    { label: "Sources", key: "source_count", compare: "higher" },
+    { label: "Verification", fn: function(d) { return d.verification_level; }, isVerifBadge: true },
+    { label: "Highlights", fn: function(d) { return d.highlights.join(", "); } },
+    { label: "Research Notes", key: "research_notes" }
+  ];
+
+  // Header row: empty label + destination names
+  var headerLabel = document.createElement("div");
+  headerLabel.className = "compare-label";
+  grid.appendChild(headerLabel);
+
+  items.forEach(function(d) {
+    var nameCell = document.createElement("div");
+    nameCell.className = "compare-name";
+    nameCell.textContent = d.destination_name;
+    grid.appendChild(nameCell);
+  });
+
+  // Data rows
+  rows.forEach(function(row) {
+    var label = document.createElement("div");
+    label.className = "compare-label";
+    label.textContent = row.label;
+    grid.appendChild(label);
+
+    // Get numeric values for comparison highlighting
+    var numericValues = items.map(function(d) {
+      if (row.key && typeof d[row.key] === "number") return d[row.key];
+      return null;
+    });
+
+    var bestIdx = -1, worstIdx = -1;
+    if (row.compare && numericValues.every(function(v) { return v !== null; })) {
+      var allNums = numericValues.slice();
+      if (row.compare === "lower") {
+        bestIdx = allNums.indexOf(Math.min.apply(null, allNums));
+        worstIdx = allNums.indexOf(Math.max.apply(null, allNums));
+      } else {
+        bestIdx = allNums.indexOf(Math.max.apply(null, allNums));
+        worstIdx = allNums.indexOf(Math.min.apply(null, allNums));
+      }
+      if (numericValues[bestIdx] === numericValues[worstIdx]) {
+        bestIdx = -1; worstIdx = -1;
+      }
+    }
+
+    items.forEach(function(d, i) {
+      var cell = document.createElement("div");
+      var cls = "compare-cell";
+      if (i === bestIdx) cls += " compare-better";
+      else if (i === worstIdx) cls += " compare-worse";
+      cell.className = cls;
+
+      if (row.isBadge) {
+        cell.appendChild(createBadge(d.type, "badge-" + d.type));
+      } else if (row.isVerifBadge) {
+        cell.appendChild(createBadge(d.verification_level, verificationClass(d.verification_level)));
+      } else if (row.fn) {
+        cell.textContent = row.fn(d);
+      } else {
+        var val = d[row.key];
+        if (val === undefined || val === null) val = "";
+        var text = String(val);
+        if (row.prefix) text = row.prefix + text;
+        if (row.suffix) text = text + row.suffix;
+        cell.textContent = text;
+      }
+
+      grid.appendChild(cell);
+    });
+  });
+
+  // Scroll to comparison
+  panel.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// ===================================================================
+// Event listeners
+// ===================================================================
+document.getElementById("filterType").addEventListener("change", renderTable);
+document.getElementById("filterVerification").addEventListener("change", renderTable);
+
+var costSlider = document.getElementById("filterCost");
+var costDisplay = document.getElementById("costDisplay");
+costSlider.addEventListener("input", function() {
+  costDisplay.textContent = this.value === "250" ? "$250+" : "$" + this.value;
+  renderTable();
+});
+
+document.querySelectorAll("th[data-col]").forEach(function(th) {
+  th.addEventListener("click", function() {
+    var col = this.dataset.col;
+    if (sortCol === col) {
+      sortDir = sortDir === "asc" ? "desc" : "asc";
+    } else {
+      sortCol = col;
+      sortDir = "asc";
+    }
+    renderTable();
+  });
+});
+
+document.getElementById("btnCompare").addEventListener("click", renderComparison);
+
+document.getElementById("btnClearCompare").addEventListener("click", function() {
+  selected.clear();
+  updateCompareState();
+  document.getElementById("comparePanel").classList.remove("visible");
+  renderTable();
+});
+
+document.getElementById("btnCloseCompare").addEventListener("click", function() {
+  document.getElementById("comparePanel").classList.remove("visible");
+});
+
+// Initial render
+renderTable();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+# Environment and secrets
+.env
+.env.local
+*.key
+*.pem
+
+# Claude Code project config (user-specific, not shared)
+.mcp.json
+
+# Dataset exports -- track CSV for portability, ignore generated XLSX
+dataset/exports/*.xlsx
+
+# Large binary files -- do not commit PDFs over 10MB or large datasets
+# (add specific patterns here if needed, e.g. *.pdf for very large files)
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Temporary files
+*.tmp
+*.bak
+*.log
